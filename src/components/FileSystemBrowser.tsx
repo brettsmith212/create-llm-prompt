@@ -143,28 +143,18 @@ const FileSystemBrowser = () => {
 
     function updateTree(tree: TreeNode[], path: string, selected: boolean): TreeNode[] {
       return tree.map(node => {
-        if (node.path === path) {
-          // Update the selected state of the current node
+        // Update the selected state of the current node
+        if (node.path === path || node.path.startsWith(path + '/')) {
           node = updateNode(node, selected);
+        }
 
-          // If it's a directory, recursively update all children
-          if (node.type === "directory" && node.children) {
-            node.children = node.children.map(child => {
-              child = updateNode(child, selected);
-              if (child.type === "directory" && child.children) {
-                updateTree(child.children, child.path, selected);
-              }
-              return child;
-            });
-          }
-          return node;
-        } else if (node.type === "directory" && node.children) {
+        // If it's a directory, recursively update all children
+        if (node.type === "directory" && node.children) {
           node.children = updateTree(node.children, path, selected);
         }
         return node;
       });
     }
-
 
     if (fileSystemTree) {
       const updatedTree = updateTree(fileSystemTree, path, selected);
