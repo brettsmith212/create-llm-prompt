@@ -1,0 +1,203 @@
+"use client";
+import {
+  ChangeEvent,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Checkbox } from "../components/ui/checkbox";
+
+interface TreeNode {
+  path: string;
+  name: string;
+  type: "file" | "directory";
+  children?: TreeNode[];
+  selected: boolean;
+}
+
+async function generateFileSystemTree(
+  handle: FileSystemDirectoryHandle,
+  path: string = "",
+  initialSelection: string[] = []
+): Promise<TreeNode[]> {
+  const nodes: TreeNode[] = [];
+
+  try {
+    for await (const entry of handle.values()) {
+      const entryPath = `${path}/${entry.name}`;
+
+      if (entry.kind === 'directory') {
+        const dirHandle = await handle.getDirectoryHandle(entry.name);
+        const children = await generateFileSystemTree(dirHandle, entryPath, initialSelection);
+        const isSelected = initialSelection.includes(entryPath);
+        nodes.push({
+          path: entryPath,
+          name: entry.name,
+          type: "directory",
+          children: children,
+          selected: isSelected,
+        });
+      } else {
+        const isSelected = initialSelection.includes(entryPath);
+        nodes.push({
+          path: entryPath,
+          name: entry.name,
+          type: "file",
+          selected: isSelected,
+        });
+      }
+    }
+    return nodes;
+  } catch (error) {
+    console.error("Error generating file system tree:", error);
+    return [];
+  }
+}
+
+interface TreeViewProps {
+  tree: TreeNode[];
+  onChange: (path: string, selected: boolean) => void;
+}
+const TreeView = ({ tree, onChange }: TreeViewProps) => {
+  if (!tree) {
+    return null;
+  }
+
+  return (
+    <ul>
+      {tree.map((node) => (
+        <li key={node.path}>
+          <label className="flex items-center space-x-2">
+            <Checkbox
+              checked={node.selected}
+              onCheckedChange={(checked) => onChange(node.path, checked)}
+            />
+            <span>{node.name}</span>
+          </label>
+          {node.type === "directory" && node.children && (
+            <div className="ml-4">
+              <TreeView tree={node.children} onChange={onChange} />
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+const FileSystemBrowser = () => {
+  const [directoryHandle, setDirectoryHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [fileSystemTree, setFileSystemTree] = useState<TreeNode[] | null>(null);
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+
+  const handleDirectorySelect = async () => {
+    try {
+      const handle = await window.showDirectoryPicker();
+      setDirectoryHandle(handle);
+      const tree = await generateFileSystemTree(handle);
+      setFileSystemTree(tree);
+    } catch (error) {
+      console.error("Error selecting directory:", error);
+    }
+  };
+
+  const handleNodeSelectionChange = (path: string, selected: boolean) => {
+    function updateNode(node: TreeNode, path: string, selected: boolean): TreeNode {
+      if (node.path === path) {
+        return { ...node, selected: selected };
+      }
+
+      if (node.type === "directory" && node.children) {
+        return {
+          ...node,
+          children: node.children.map((child) => updateNode(child, path, selected)),
+        };
+      }
+
+      return node;
+    }
+
+    if (fileSystemTree) {
+      const updatedTree = fileSystemTree.map((node) => updateNode(node, path, selected));
+      setFileSystemTree(updatedTree);
+
+      // Update selected paths state
+      if (selected) {
+        setSelectedPaths((prev) => [...prev, path]);
+      } else {
+        setSelectedPaths((prev) => prev.filter((p) => p !== path));
+      }
+    }
+  };
+
+  const handleCopySelectedFiles = async () => {
+    if (!fileSystemTree || !directoryHandle) {
+      alert("No files selected or tree generated");
+      return;
+    }
+
+    let content = "";
+
+    async function traverseTree(nodes: TreeNode[], currentHandle: FileSystemDirectoryHandle) {
+      for (const node of nodes) {
+        if (node.selected) {
+          if (node.type === "file") {
+            try {
+              const fileHandle = await currentHandle.getFileHandle(node.name);
+              const file = await fileHandle.getFile();
+              const fileContent = await file.text();
+              content += `\n\n--- ${node.path} ---\n${fileContent}`;
+            } catch (error) {
+              console.error(`Error reading file ${node.path}:`, error);
+              alert(`Error reading file ${node.path}`);
+            }
+          } else if (node.type === "directory" && node.children) {
+            const dirHandle = await currentHandle.getDirectoryHandle(node.name);
+            await traverseTree(node.children, dirHandle);
+          }
+        }
+      }
+    }
+
+    await traverseTree(fileSystemTree, directoryHandle);
+
+    if (content) {
+      try {
+        await navigator.clipboard.writeText(content);
+        alert("File contents copied to clipboard!");
+      } catch (error) {
+        console.error("Error copying to clipboard:", error);
+        alert("Failed to copy to clipboard: " + error);
+      }
+    } else {
+      alert("No file content to copy.");
+    }
+  };
+
+  return (
+    <div className="container mx-auto mt-8 p-4">
+      <h1 className="text-2xl font-bold mb-4">File System Browser</h1>
+      <div className="flex items-center mb-4">
+        <Button variant="outline" onClick={handleDirectorySelect}>
+          Select Directory
+        </Button>
+        {directoryHandle && <span className="ml-4">Selected: {directoryHandle.name}</span>}
+      </div>
+
+      {fileSystemTree && (
+        <div className="mt-4">
+          <TreeView tree={fileSystemTree} onChange={handleNodeSelectionChange} />
+        </div>
+      )}
+
+      <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
+        Copy Selected File Contents
+      </Button>
+    </div>
+  );
+};
+
+export default FileSystemBrowser;
