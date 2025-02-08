@@ -110,6 +110,9 @@ const FileSystemBrowser = () => {
   const [fileSystemTree, setFileSystemTree] = useState<TreeNode[] | null>(null);
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<{ [path: string]: boolean }>({});
+  const [promptFileHandle, setPromptFileHandle] = useState<FileSystemFileHandle | null>(null);
+  const [promptFileName, setPromptFileName] = useState<string>("");
+  const [promptFileContent, setPromptFileContent] = useState<string>("");
 
   const handleDirectorySelect = async () => {
     try {
@@ -128,6 +131,9 @@ const FileSystemBrowser = () => {
         setFileSystemTree(null);
         setSelectedPaths([]);
         setExpandedFolders({});
+        setPromptFileHandle(null);
+        setPromptFileName("");
+        setPromptFileContent("");
     };
 
   const handleNodeSelectionChange = (path: string, selected: boolean) => {
@@ -163,6 +169,20 @@ const FileSystemBrowser = () => {
         setExpandedFolders((prev) => ({ ...prev, [path]: !prev[path] }));
     };
 
+  const handlePromptFileSelect = async () => {
+    try {
+      const [fileHandle] = await window.showOpenFilePicker();
+      const file = await fileHandle.getFile();
+      const fileContent = await file.text();
+
+      setPromptFileHandle(fileHandle);
+      setPromptFileName(file.name);
+      setPromptFileContent(fileContent);
+    } catch (error) {
+      console.error("Error selecting prompt file:", error);
+    }
+  };
+
   const handleCopySelectedFiles = async () => {
     if (!fileSystemTree || !directoryHandle) {
       alert("No files selected or tree generated");
@@ -170,6 +190,10 @@ const FileSystemBrowser = () => {
     }
 
     let content = "";
+
+    if (promptFileContent) {
+      content = `\n--- Prompt Instruction: ${promptFileName} ---\n${promptFileContent}\n\n`;
+    }
 
     async function traverseTree(nodes: TreeNode[], currentHandle: FileSystemDirectoryHandle) {
       for (const node of nodes) {
@@ -210,6 +234,15 @@ const FileSystemBrowser = () => {
   return (
     <div className="container mx-auto mt-8 p-4">
       <h1 className="text-2xl font-bold mb-4">File System Browser</h1>
+
+      {/* Prompt Instruction File Selection */}
+      <div className="flex items-center mb-4">
+        <Button variant="outline" onClick={handlePromptFileSelect}>
+          Select Prompt Instruction File
+        </Button>
+        {promptFileName && <span className="ml-4">Selected: {promptFileName}</span>}
+      </div>
+
       <div className="flex items-center mb-4">
         <Button variant="outline" onClick={handleDirectorySelect}>
           Select Directory
