@@ -183,6 +183,12 @@ const FileSystemBrowser = () => {
     }
   };
 
+    const handleClearPromptFile = () => {
+        setPromptFileHandle(null);
+        setPromptFileName("");
+        setPromptFileContent("");
+    };
+
   const handleCopySelectedFiles = async () => {
     if (!fileSystemTree || !directoryHandle) {
       alert("No files selected or tree generated");
@@ -240,6 +246,11 @@ const FileSystemBrowser = () => {
         <Button variant="outline" onClick={handlePromptFileSelect}>
           Select Prompt Instruction File
         </Button>
+        {promptFileName && (
+          <Button variant="destructive" onClick={handleClearPromptFile}>
+            Clear Selected File
+          </Button>
+        )}
         {promptFileName && <span className="ml-4">Selected: {promptFileName}</span>}
       </div>
 
