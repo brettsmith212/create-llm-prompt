@@ -137,31 +137,54 @@ const FileSystemBrowser = () => {
     };
 
   const handleNodeSelectionChange = (path: string, selected: boolean) => {
-    function updateNode(node: TreeNode, path: string, selected: boolean): TreeNode {
-      if (node.path === path) {
-        return { ...node, selected: selected };
-      }
-
-      if (node.type === "directory" && node.children) {
-        return {
-          ...node,
-          children: node.children.map((child) => updateNode(child, path, selected)),
-        };
-      }
-
-      return node;
+    function updateNode(node: TreeNode, selected: boolean): TreeNode {
+      return { ...node, selected: selected };
     }
 
+    function updateTree(tree: TreeNode[], path: string, selected: boolean): TreeNode[] {
+      return tree.map(node => {
+        if (node.path === path) {
+          // Update the selected state of the current node
+          node = updateNode(node, selected);
+
+          // If it's a directory, recursively update all children
+          if (node.type === "directory" && node.children) {
+            node.children = node.children.map(child => {
+              child = updateNode(child, selected);
+              if (child.type === "directory" && child.children) {
+                updateTree(child.children, child.path, selected);
+              }
+              return child;
+            });
+          }
+          return node;
+        } else if (node.type === "directory" && node.children) {
+          node.children = updateTree(node.children, path, selected);
+        }
+        return node;
+      });
+    }
+
+
     if (fileSystemTree) {
-      const updatedTree = fileSystemTree.map((node) => updateNode(node, path, selected));
+      const updatedTree = updateTree(fileSystemTree, path, selected);
       setFileSystemTree(updatedTree);
 
       // Update selected paths state
-      if (selected) {
-        setSelectedPaths((prev) => [...prev, path]);
-      } else {
-        setSelectedPaths((prev) => prev.filter((p) => p !== path));
-      }
+      const updatedSelectedPaths = updatedTree.reduce((acc: string[], node) => {
+        function collectSelectedPaths(node: TreeNode) {
+          if (node.selected) {
+            acc.push(node.path);
+          }
+          if (node.type === "directory" && node.children) {
+            node.children.forEach(collectSelectedPaths);
+          }
+        }
+        collectSelectedPaths(node);
+        return acc;
+      }, []);
+
+      setSelectedPaths(updatedSelectedPaths);
     }
   };
 
