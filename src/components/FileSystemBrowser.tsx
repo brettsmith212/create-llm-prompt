@@ -60,8 +60,10 @@ async function generateFileSystemTree(
 interface TreeViewProps {
   tree: TreeNode[];
   onChange: (path: string, selected: boolean) => void;
+  expandedFolders: { [path: string]: boolean };
+  onToggle: (path: string) => void;
 }
-const TreeView = ({ tree, onChange }: TreeViewProps) => {
+const TreeView = ({ tree, onChange, expandedFolders, onToggle }: TreeViewProps) => {
   if (!tree) {
     return null;
   }
@@ -70,17 +72,32 @@ const TreeView = ({ tree, onChange }: TreeViewProps) => {
     <ul>
       {tree.map((node) => (
         <li key={node.path}>
-          <label className="flex items-center space-x-2">
-            <Checkbox
-              checked={node.selected}
-              onCheckedChange={(checked) => onChange(node.path, checked)}
-            />
-            <span>{node.name}</span>
-          </label>
-          {node.type === "directory" && node.children && (
-            <div className="ml-4">
-              <TreeView tree={node.children} onChange={onChange} />
+          {node.type === "directory" ? (
+            <div>
+              <label className="flex items-center space-x-2">
+                <button onClick={() => onToggle(node.path)} className="mr-2">
+                  {expandedFolders[node.path] ? "[-]" : "[+]"}
+                </button>
+                <Checkbox
+                  checked={node.selected}
+                  onCheckedChange={(checked) => onChange(node.path, checked)}
+                />
+                <span>{node.name}</span>
+              </label>
+              {expandedFolders[node.path] && node.children && (
+                <div className="ml-4">
+                  <TreeView tree={node.children} onChange={onChange} expandedFolders={expandedFolders} onToggle={onToggle} />
+                </div>
+              )}
             </div>
+          ) : (
+            <label className="flex items-center space-x-2">
+              <Checkbox
+                checked={node.selected}
+                onCheckedChange={(checked) => onChange(node.path, checked)}
+              />
+              <span>{node.name}</span>
+            </label>
           )}
         </li>
       ))}
@@ -92,6 +109,7 @@ const FileSystemBrowser = () => {
   const [directoryHandle, setDirectoryHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [fileSystemTree, setFileSystemTree] = useState<TreeNode[] | null>(null);
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  const [expandedFolders, setExpandedFolders] = useState<{ [path: string]: boolean }>({});
 
   const handleDirectorySelect = async () => {
     try {
@@ -99,10 +117,18 @@ const FileSystemBrowser = () => {
       setDirectoryHandle(handle);
       const tree = await generateFileSystemTree(handle);
       setFileSystemTree(tree);
+      setExpandedFolders({}); // Reset expanded folders on new directory selection
     } catch (error) {
       console.error("Error selecting directory:", error);
     }
   };
+
+    const handleClearSelectedFolder = () => {
+        setDirectoryHandle(null);
+        setFileSystemTree(null);
+        setSelectedPaths([]);
+        setExpandedFolders({});
+    };
 
   const handleNodeSelectionChange = (path: string, selected: boolean) => {
     function updateNode(node: TreeNode, path: string, selected: boolean): TreeNode {
@@ -132,6 +158,10 @@ const FileSystemBrowser = () => {
       }
     }
   };
+
+    const handleToggleFolder = (path: string) => {
+        setExpandedFolders((prev) => ({ ...prev, [path]: !prev[path] }));
+    };
 
   const handleCopySelectedFiles = async () => {
     if (!fileSystemTree || !directoryHandle) {
@@ -184,12 +214,22 @@ const FileSystemBrowser = () => {
         <Button variant="outline" onClick={handleDirectorySelect}>
           Select Directory
         </Button>
+            {directoryHandle && (
+                <Button variant="destructive" onClick={handleClearSelectedFolder}>
+                    Clear Selected Folder
+                </Button>
+            )}
         {directoryHandle && <span className="ml-4">Selected: {directoryHandle.name}</span>}
       </div>
 
       {fileSystemTree && (
         <div className="mt-4">
-          <TreeView tree={fileSystemTree} onChange={handleNodeSelectionChange} />
+          <TreeView
+            tree={fileSystemTree}
+            onChange={handleNodeSelectionChange}
+            expandedFolders={expandedFolders}
+            onToggle={handleToggleFolder}
+          />
         </div>
       )}
 
