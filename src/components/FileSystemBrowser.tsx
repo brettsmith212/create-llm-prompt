@@ -138,9 +138,6 @@ const FileSystemBrowser = () => {
         setFileSystemTree(null);
         setSelectedPaths([]);
         setExpandedFolders({});
-        setPromptFileHandle(null);
-        setPromptFileName("");
-        setPromptFileContent("");
     };
 
   const handleNodeSelectionChange = (path: string, selected: boolean) => {
