@@ -6,7 +6,7 @@ import { type Metadata } from "next";
 export const metadata: Metadata = {
   title: "File System Browser",
   description: "Copy your AI Instruction Prompt and all relevant code to your clipboard",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [{ rel: "icon", url: "/white-circle.svg" }],
 };
 
 export default function RootLayout({
