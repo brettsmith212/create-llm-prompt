@@ -9,6 +9,8 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Checkbox } from "../components/ui/checkbox";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { cn } from "~/lib/utils";
 
 interface TreeNode {
   path: string;
@@ -251,48 +253,59 @@ const FileSystemBrowser = () => {
   };
 
   return (
-    <div className="container mx-auto mt-8 p-4">
-      <h1 className="text-2xl font-bold mb-4">File System Browser</h1>
-
-      {/* Prompt Instruction File Selection */}
-      <div className="flex items-center mb-4">
-        <Button variant="outline" onClick={handlePromptFileSelect}>
-          Select Prompt Instruction File
-        </Button>
-        {promptFileName && (
-          <Button variant="destructive" onClick={handleClearPromptFile}>
-            Clear Selected File
-          </Button>
-        )}
-        {promptFileName && <span className="ml-4">Selected: {promptFileName}</span>}
-      </div>
-
-      <div className="flex items-center mb-4">
-        <Button variant="outline" onClick={handleDirectorySelect}>
-          Select Directory
-        </Button>
-            {directoryHandle && (
-                <Button variant="destructive" onClick={handleClearSelectedFolder}>
-                    Clear Selected Folder
-                </Button>
+    <div className="flex flex-col items-center justify-center w-full">
+      <Card className="w-[90%] max-w-3xl">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">File System Browser</CardTitle>
+          <CardDescription className="text-center">Select a directory and files to copy their contents.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {/* Prompt Instruction File Selection */}
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" onClick={handlePromptFileSelect}>
+              Select Prompt Instruction File
+            </Button>
+            {promptFileName && (
+              <Button variant="destructive" onClick={handleClearPromptFile}>
+                Clear Selected File
+              </Button>
             )}
-        {directoryHandle && <span className="ml-4">Selected: {directoryHandle.name}</span>}
-      </div>
+            {promptFileName && <span className="text-sm">Selected: {promptFileName}</span>}
+          </div>
 
-      {fileSystemTree && (
-        <div className="mt-4">
-          <TreeView
-            tree={fileSystemTree}
-            onChange={handleNodeSelectionChange}
-            expandedFolders={expandedFolders}
-            onToggle={handleToggleFolder}
-          />
-        </div>
-      )}
+          {/* Directory Selection */}
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" onClick={handleDirectorySelect}>
+              Select Directory
+            </Button>
+            {directoryHandle && (
+              <Button variant="destructive" onClick={handleClearSelectedFolder}>
+                Clear Selected Folder
+              </Button>
+            )}
+            {directoryHandle && <span className="text-sm">Selected: {directoryHandle.name}</span>}
+          </div>
 
-      <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
-        Copy Selected File Contents
-      </Button>
+          {/* File System Tree View */}
+          {fileSystemTree && (
+            <div className="mt-4">
+              <TreeView
+                tree={fileSystemTree}
+                onChange={handleNodeSelectionChange}
+                expandedFolders={expandedFolders}
+                onToggle={handleToggleFolder}
+              />
+            </div>
+          )}
+
+          {/* Copy Button */}
+          <div className="flex justify-center">
+            <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
+              Copy Selected File Contents
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
