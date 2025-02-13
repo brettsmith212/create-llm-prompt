@@ -46,7 +46,7 @@ export function ApplyChangesForm() {
           type="text"
           value={projectDirectory}
           onChange={(e) => setProjectDirectory(e.target.value)}
-          placeholder="e.g. /Users/myusername/projects/o1-xml-parser"
+          placeholder="/path/to/code/repository"
         />
       </div>
       <div className="flex flex-col">
