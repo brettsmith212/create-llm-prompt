@@ -11,6 +11,7 @@ import { Input } from "../components/ui/input";
 import { Checkbox } from "../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { cn } from "~/lib/utils";
+import { Loader2 } from "lucide-react";
 
 interface TreeNode {
   path: string;
@@ -115,16 +116,20 @@ const FileSystemBrowser = () => {
   const [promptFileHandle, setPromptFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [promptFileName, setPromptFileName] = useState<string>("");
   const [promptFileContent, setPromptFileContent] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleDirectorySelect = async () => {
     try {
       const handle = await window.showDirectoryPicker();
+      setIsLoading(true);
       setDirectoryHandle(handle);
       const tree = await generateFileSystemTree(handle);
       setFileSystemTree(tree);
       setExpandedFolders({}); // Reset expanded folders on new directory selection
     } catch (error) {
       console.error("Error selecting directory:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -275,7 +280,7 @@ const FileSystemBrowser = () => {
 
           {/* Directory Selection */}
           <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={handleDirectorySelect}>
+            <Button variant="outline" onClick={handleDirectorySelect} disabled={isLoading}>
               Select Directory
             </Button>
             {directoryHandle && (
@@ -287,7 +292,12 @@ const FileSystemBrowser = () => {
           </div>
 
           {/* File System Tree View */}
-          {fileSystemTree && (
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </div>
+          ) : fileSystemTree && (
             <div className="mt-4">
               <TreeView
                 tree={fileSystemTree}
