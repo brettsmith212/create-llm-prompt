@@ -127,7 +127,12 @@ const FileSystemBrowser = () => {
       setFileSystemTree(tree);
       setExpandedFolders({}); // Reset expanded folders on new directory selection
     } catch (error) {
-      console.error("Error selecting directory:", error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        // User cancelled the directory selection, do nothing
+        console.debug("User aborted directory selection");
+      } else {
+        console.error("Error selecting directory:", error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +201,12 @@ const FileSystemBrowser = () => {
       setPromptFileName(file.name);
       setPromptFileContent(fileContent);
     } catch (error) {
-      console.error("Error selecting prompt file:", error);
+      if (error instanceof Error && error.name === 'AbortError') {
+                // User cancelled the file selection, do nothing
+                console.debug("User aborted file selection");
+            } else {
+                console.error("Error selecting prompt file:", error);
+            }
     }
   };
 
