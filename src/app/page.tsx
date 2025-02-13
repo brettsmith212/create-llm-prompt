@@ -1,6 +1,6 @@
 import FileSystemBrowser from "../components/FileSystemBrowser";
 import { ApplyChangesForm } from "../components/apply-changes-form";
-import { Card } from "~/components/ui/card";
+import { Card, CardHeader, CardTitle } from "~/components/ui/card";
 
 export default function HomePage() {
   return (
@@ -8,6 +8,9 @@ export default function HomePage() {
       <FileSystemBrowser />
 
       <Card className="w-[90%] max-w-3xl mt-4">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">LLM XML Parser</CardTitle>
+        </CardHeader>
         <ApplyChangesForm />
       </Card>
     </main>
