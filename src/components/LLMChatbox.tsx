@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent, ComponentPropsWithoutRef } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import {
@@ -10,11 +10,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { gruvboxDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import LoadingSpinner from "./LoadingSpinner";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+interface CodeProps extends ComponentPropsWithoutRef<'code'> {
+  inline?: boolean;
+  className?: string;
+  children: React.ReactNode;
 }
 
 const LLMChatbox = () => {
@@ -23,48 +32,48 @@ const LLMChatbox = () => {
   const [selectedLLM, setSelectedLLM] = useState("gemini");
   const [isLoading, setIsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const handleSubmit = async () => {
-        if (input.trim() === "" || isLoading) return;
+  const handleSubmit = async () => {
+    if (input.trim() === "" || isLoading) return;
 
-        const userMessage: Message = { role: "user", content: input };
-        setMessages((prevMessages) => [...prevMessages, userMessage]);
-        setInput("");
-        setIsLoading(true);
+    const userMessage: Message = { role: "user", content: input };
+    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    setInput("");
+    setIsLoading(true);
 
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ messages: [...messages, userMessage], llm: selectedLLM }),
-            });
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages: [...messages, userMessage], llm: selectedLLM }),
+      });
 
-            if (!response.ok) {
-                throw new Error(`API request failed with status ${response.status}`);
-            }
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
 
-            const data = await response.json();
-            const assistantMessage: Message = { role: "assistant", content: data.text };
-            setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      const data = await response.json();
+      const assistantMessage: Message = { role: "assistant", content: data.text };
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
-        } catch (error:any) {
-            console.error("Error:", error);
-            setMessages((prevMessages) => [...prevMessages, { role: "assistant", content: `Error: ${error.message}` }]);
+    } catch (error: any) {
+      console.error("Error:", error);
+      setMessages((prevMessages) => [...prevMessages, { role: "assistant", content: `Error: ${error.message}` }]);
 
-        } finally {
-          setIsLoading(false);
-        }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.ctrlKey && e.key === "Enter") {
       e.preventDefault();
       handleSubmit();
     }
   };
-
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -72,33 +81,65 @@ const LLMChatbox = () => {
     }
   }, []);
 
+  // Auto-scroll to the bottom when new messages are added
+    useEffect(() => {
+    if (messagesEndRef.current) {
+      const shouldScroll =
+        messagesEndRef.current.scrollHeight - messagesEndRef.current.scrollTop <=
+        messagesEndRef.current.clientHeight + 10; // Tolerance
+
+      if (shouldScroll) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [messages]);
+
   return (
-    <div className="flex flex-col h-[300px]">
-      <div className="flex-1 overflow-auto p-4 border-b">
+    <div className="flex flex-col h-[500px] rounded-md border">
+      <div
+        ref={messagesEndRef}
+        className="flex-1 overflow-auto p-4 scrollbar-thin scrollbar-thumb-secondary scrollbar-track-secondary/30"
+        style={{ scrollBehavior: 'smooth' }}
+      >
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`mb-2 ${
-              message.role === "user" ? "text-right" : "text-left"
-            }`}
+            className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}
           >
-            <span
-              className={`inline-block px-3 py-1 rounded-lg ${
+            <div
+              className={`inline-block px-4 py-2 rounded-lg ${
                 message.role === "user"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-200 text-black"
               }`}
             >
-              {message.content}
-            </span>
+              <ReactMarkdown
+                components={{
+                  code({ node, inline, className, children, ...props }: CodeProps) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    return !inline && match ? (
+                      <SyntaxHighlighter
+                        style={gruvboxDark}
+                        language={match[1]}
+                        PreTag="div"
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, "")}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           </div>
         ))}
-         {isLoading && (
-            <div className="flex items-center justify-center">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading...
-            </div>
-          )}
+        {isLoading && <LoadingSpinner />}
       </div>
       <div className="p-4 flex items-start gap-2">
         <Textarea
@@ -111,20 +152,20 @@ const LLMChatbox = () => {
         />
         <div className="flex flex-col gap-2">
           <Select
-              value={selectedLLM}
-              onValueChange={(value) => setSelectedLLM(value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select LLM" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gemini">Gemini Flash 2.0</SelectItem>
-                {/* Future models can be added here */}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleSubmit} disabled={isLoading}>
-              Submit
-            </Button>
+            value={selectedLLM}
+            onValueChange={(value) => setSelectedLLM(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select LLM" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gemini">Gemini Flash 2.0</SelectItem>
+              {/* Future models can be added here */}
+            </SelectContent>
+          </Select>
+          <Button onClick={handleSubmit} disabled={isLoading}>
+            Submit
+          </Button>
         </div>
       </div>
     </div>
