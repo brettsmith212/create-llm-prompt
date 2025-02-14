@@ -14,6 +14,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { gruvboxDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import LoadingSpinner from "./LoadingSpinner";
+import CopyButton from "./CopyButton";
 
 interface Message {
   role: "user" | "assistant";
@@ -118,14 +119,17 @@ const LLMChatbox = () => {
                   code({ node, inline, className, children, ...props }: CodeProps) {
                     const match = /language-(\w+)/.exec(className || "");
                     return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={gruvboxDark}
-                        language={match[1]}
-                        PreTag="div"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
+                      <div style={{ position: 'relative' }}>
+                        <SyntaxHighlighter
+                          style={gruvboxDark}
+                          language={match[1]}
+                          PreTag="div"
+                          {...props}
+                        >
+                          {String(children).replace(/\n$/, "")}
+                        </SyntaxHighlighter>
+                        <CopyButton textToCopy={String(children).replace(/\n$/, "")} />
+                      </div>
                     ) : (
                       <code className={className} {...props}>
                         {children}
