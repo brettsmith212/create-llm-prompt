@@ -27,11 +27,16 @@ interface CodeProps extends ComponentPropsWithoutRef<'code'> {
   children: React.ReactNode;
 }
 
-const LLMChatbox = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+interface LLMChatboxProps {
+  messages: Message[];
+  setMessages: (messages: Message[]) => void;
+  isLoading: boolean;
+  setIsLoading: (isLoading: boolean) => void;
+}
+
+const LLMChatbox: React.FC<LLMChatboxProps> = ({ messages, setMessages, isLoading, setIsLoading }) => {
   const [input, setInput] = useState("");
   const [selectedLLM, setSelectedLLM] = useState("gemini");
-  const [isLoading, setIsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
