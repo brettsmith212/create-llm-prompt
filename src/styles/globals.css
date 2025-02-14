@@ -62,7 +62,7 @@
   }
 }
 
-/*  Added Scrollbar Styling */
+/* Added Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px; /* Set height for horizontal scrollbar */
@@ -76,4 +76,11 @@
 ::-webkit-scrollbar-track {
   background-color: hsl(var(--secondary) / 0.3);
     border-radius: 10px;
+}
+
+.code-block {
+  max-width: 100%;
+  white-space: pre-wrap;
+  word-break: break-all;
+  display: block;
 }

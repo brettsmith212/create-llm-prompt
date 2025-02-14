@@ -121,7 +121,13 @@ const LLMChatbox = () => {
                     return !inline && match ? (
                       <div style={{ position: 'relative' }}>
                         <SyntaxHighlighter
-                          style={gruvboxDark}
+                          style={{
+                            ...gruvboxDark,
+                            maxWidth: '100%',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-all',
+                            display: 'block', // Important for max-width to work
+                          }}
                           language={match[1]}
                           PreTag="div"
                           {...props}
