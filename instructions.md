@@ -3,7 +3,7 @@ You are a skilled software engineer specializing in react and next.js. Below is 
 
 This program allows a user to select a folder, review the entire contents of the folder, and checkbox individual files. When Copy Selected File Contents button is selected it copies all the selected files contents to clipboard.
 
-TASK: [ADD TODO ITEMS HERE]
+TASK: Add task here
 
 Present a complete plan to solve the problem and implement it in the codebase.
 
@@ -36,7 +36,7 @@ __FULL FILE CODE HERE__
 
 Other rules:
 - DO NOT remove <ai_context> sections. These are to provide you additional context about each file.
-- The <ai_context> is only to be added by me. You do not add <ai_context> to any files.
+- DO NOT ever add <ai_context> to the code you generate.
 - If you create a file, add an <ai_context> comment section at the top of the file.
 - If you update a file make sure its <ai_context> stays up-to-date
 - DO NOT add comments related to your edits
