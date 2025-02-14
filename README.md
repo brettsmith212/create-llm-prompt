@@ -6,6 +6,8 @@
 
 - Copy and paste the output from the LLM into the `LLM XML Parser`. Use the absolute file path to the repository for `Project Directory`. Select `Apply` and code changes from the LLM will be applied to your repository.
 
+- Create environment variable `GEMINI_API_KEY` to use the LLM Chatbox if you prefer the in app chatbox.
+
 ## How to run
 
 `npm run dev`
