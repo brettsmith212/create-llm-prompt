@@ -351,30 +351,31 @@ const FileSystemBrowser = () => {
     if (!directoryHandle) return;
 
     setIsLoading(true);
-    const currentSelections = [...selectedPaths];
+    let currentSelections = [...selectedPaths];
     const currentExpandedFolders = { ...expandedFolders };
 
-    try {
-      // Regenerate tree, using stored selections
-      const tree = await generateFileSystemTree(directoryHandle, "", currentSelections);
+     // Helper function to recursively un-select all nodes in tree.
+    function unselectAll(tree: TreeNode[]): TreeNode[] {
+      return tree.map(node => ({
+        ...node,
+        selected: false,
+        children: node.children ? unselectAll(node.children) : undefined
+      }));
+    }
 
-      // Update selected paths *after* setting the new tree
-      const updatedSelectedPaths = tree.reduce((acc: string[], node) => {
-        function collectSelectedPaths(node: TreeNode) {
-          if (node.selected) {
-            acc.push(node.path);
-          }
-          if (node.type === "directory" && node.children) {
-            node.children.forEach(collectSelectedPaths);
-          }
-        }
-        collectSelectedPaths(node);
-        return acc;
-      }, []);
+    // Un-select all nodes in existing fileSystemTree.
+    if (fileSystemTree) {
+      setFileSystemTree(unselectAll(fileSystemTree)); //update
+    }
+
+    setSelectedPaths([]); // Clear selected paths
+
+    try {
+      // Regenerate tree
+      const tree = await generateFileSystemTree(directoryHandle, "", []);
 
       setFileSystemTree(tree);
       setExpandedFolders(currentExpandedFolders);
-      setSelectedPaths(updatedSelectedPaths); // Re-apply selections based on the *new* tree
 
     } catch (error) {
       console.error("Error refreshing folder:", error);
