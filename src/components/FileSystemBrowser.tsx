@@ -388,6 +388,7 @@ const FileSystemBrowser = () => {
     }
 
     setSelectedPaths([]); // Clear selected paths
+    setShowSelectedFiles(false); // Close selected file view
 
     try {
       // Regenerate tree
