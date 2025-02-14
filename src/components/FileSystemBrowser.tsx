@@ -573,10 +573,10 @@ const FileSystemBrowser = () => {
             )}
             {/* Selected Files */}
             {showSelectedFiles && (
-                <div className="border rounded-md p-2 bg-muted-foreground text-muted text-sm">
-                    <ul className="list-disc list-inside">
+                <div className="border rounded-md p-2 bg-secondary text-secondary-foreground text-sm">
+                    <ul className="space-y-1">
                         {selectedPaths.map((path) => (
-                        <li key={path}>{path}</li>
+                        <li key={path} className="text-secondary-foreground">{path}</li>
                         ))}
                     </ul>
                 </div>
