@@ -22,6 +22,7 @@ interface TreeNode {
   selected: boolean;
 }
 
+// Updated generateFileSystemTree function
 async function generateFileSystemTree(
   handle: FileSystemDirectoryHandle,
   path: string = "",
@@ -35,8 +36,39 @@ async function generateFileSystemTree(
 
       if (entry.kind === 'directory') {
         const dirHandle = await handle.getDirectoryHandle(entry.name);
-        const children = await generateFileSystemTree(dirHandle, entryPath, initialSelection);
-        const isSelected = initialSelection.includes(entryPath);
+
+        // Recursively check if selection is valid
+        const filteredSelection = await Promise.all(initialSelection.map(async (selPath) => {
+          const segments = selPath.split('/').filter(Boolean);
+          segments.shift();
+          let current: FileSystemDirectoryHandle | FileSystemFileHandle = handle;
+
+          try {
+            for (const segment of segments) {
+              if (current.kind === 'directory') {
+                  try {
+                      current = await current.getDirectoryHandle(segment);
+                  } catch {
+                      try {
+                          current = await current.getFileHandle(segment);
+                      } catch {
+                          return null; // Neither file nor directory exists
+                      }
+                  }
+              } else {
+                return null;  // If the current level is not a directory and we have more segments, it is invalid.
+              }
+            }
+            return selPath; //if we make it through the try/catch, then it is a valid path
+          } catch (error) {
+            return null; // Path no longer exists
+          }
+        }));
+
+        const validSelection = filteredSelection.filter((sel): sel is string => sel !== null); //filter out bad paths
+
+        const children = await generateFileSystemTree(dirHandle, entryPath, validSelection);
+        const isSelected = validSelection.includes(entryPath); // Check against valid selection
         nodes.push({
           path: entryPath,
           name: entry.name,
@@ -45,7 +77,37 @@ async function generateFileSystemTree(
           selected: isSelected,
         });
       } else {
-        const isSelected = initialSelection.includes(entryPath);
+        //check if selection is valid (same as above).
+        const isValidSelection = await (async () => {
+            const segments = entryPath.split('/').filter(Boolean);
+            segments.shift(); //remove first empty element.
+            let current: FileSystemDirectoryHandle | FileSystemFileHandle = handle;
+
+            try {
+              for (const segment of segments) {
+                if (current.kind === 'directory') {
+                  try {
+                      current = await current.getDirectoryHandle(segment);
+                  } catch {
+                      try {
+                          current = await current.getFileHandle(segment);
+                      } catch {
+                          return false; // Neither file nor directory exists
+                      }
+                  }
+                }
+                else {
+                  return false; // If we are not a directory, and we have more segments, then this isn't valid
+                }
+              }
+              return true; // we made it here.
+            } catch (error) {
+              return false; // Path no longer exists
+            }
+        })();
+
+
+        const isSelected = isValidSelection && initialSelection.includes(entryPath); //check against path and that it is valid.
         nodes.push({
           path: entryPath,
           name: entry.name,
@@ -244,6 +306,7 @@ const FileSystemBrowser = () => {
         }
     }
 
+
   const handleRefreshFile = async () => {
     if (!directoryHandle || !selectedFileForRefresh) return;
 
@@ -288,16 +351,31 @@ const FileSystemBrowser = () => {
     if (!directoryHandle) return;
 
     setIsLoading(true);
-    // Store current selections and expanded folders.
     const currentSelections = [...selectedPaths];
     const currentExpandedFolders = { ...expandedFolders };
 
     try {
       // Regenerate tree, using stored selections
       const tree = await generateFileSystemTree(directoryHandle, "", currentSelections);
+
+      // Update selected paths *after* setting the new tree
+      const updatedSelectedPaths = tree.reduce((acc: string[], node) => {
+        function collectSelectedPaths(node: TreeNode) {
+          if (node.selected) {
+            acc.push(node.path);
+          }
+          if (node.type === "directory" && node.children) {
+            node.children.forEach(collectSelectedPaths);
+          }
+        }
+        collectSelectedPaths(node);
+        return acc;
+      }, []);
+
       setFileSystemTree(tree);
-      setExpandedFolders(currentExpandedFolders); // Restore expanded folders
-      setSelectedPaths(currentSelections); // re-apply selections.
+      setExpandedFolders(currentExpandedFolders);
+      setSelectedPaths(updatedSelectedPaths); // Re-apply selections based on the *new* tree
+
     } catch (error) {
       console.error("Error refreshing folder:", error);
       alert("Error refreshing folder");
