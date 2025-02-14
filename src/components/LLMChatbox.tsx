@@ -98,7 +98,7 @@ const LLMChatbox = () => {
     <div className="flex flex-col h-[500px] rounded-md border">
       <div
         ref={messagesEndRef}
-        className="flex-1 overflow-auto p-4 scrollbar-thin scrollbar-thumb-secondary scrollbar-track-secondary/30"
+        className="flex-1 overflow-auto p-4"
         style={{ scrollBehavior: 'smooth' }}
       >
         {messages.map((message, index) => (
