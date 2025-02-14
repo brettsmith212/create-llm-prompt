@@ -48,7 +48,7 @@ const CopyButton: React.FC<CopyButtonProps> = ({ textToCopy }) => {
             variant="ghost"
             size="icon"
             onClick={handleCopy}
-            className="absolute top-2 right-2 hover:bg-gray-600 [&>svg]:hover:stroke-gray-900"
+            className="absolute bottom-2 right-2 hover:bg-gray-600 [&>svg]:hover:stroke-gray-900"
           >
              {showCopiedMessage ? (
               <ClipboardCheck className="h-4 w-4 stroke-green-500" />

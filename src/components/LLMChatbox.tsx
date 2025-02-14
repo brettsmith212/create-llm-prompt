@@ -133,6 +133,7 @@ const LLMChatbox: React.FC<LLMChatboxProps> = ({ messages, setMessages, isLoadin
                             wordBreak: 'break-all', // Break words if needed
                             display: 'block',
                             overflowX: 'auto', // Add horizontal scroll if needed
+                            paddingBottom: '20px' //add some bottom padding
                           }}
                           language={match[1]}
                           PreTag="div"
