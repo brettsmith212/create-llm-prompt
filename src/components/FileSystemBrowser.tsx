@@ -22,100 +22,108 @@ interface TreeNode {
   selected: boolean;
 }
 
-// Updated generateFileSystemTree function
+// Updated generateFileSystemTree function - Truly Asynchronous and No file content loading
 async function generateFileSystemTree(
   handle: FileSystemDirectoryHandle,
   path: string = "",
   initialSelection: string[] = []
 ): Promise<TreeNode[]> {
   const nodes: TreeNode[] = [];
+  const entryPromises: Promise<void>[] = [];
 
   try {
+      // Collect all entry processing promises
     for await (const entry of handle.values()) {
-      const entryPath = `${path}/${entry.name}`;
+      entryPromises.push(
+        (async () => {
+          const entryPath = `${path}/${entry.name}`;
 
-      if (entry.kind === 'directory') {
-        const dirHandle = await handle.getDirectoryHandle(entry.name);
+          if (entry.kind === 'directory') {
+            const dirHandle = await handle.getDirectoryHandle(entry.name);
 
-        // Recursively check if selection is valid
-        const filteredSelection = await Promise.all(initialSelection.map(async (selPath) => {
-          const segments = selPath.split('/').filter(Boolean);
-          segments.shift();
-          let current: FileSystemDirectoryHandle | FileSystemFileHandle = handle;
+            // Recursively check if selection is valid
+            const filteredSelection = await Promise.all(initialSelection.map(async (selPath) => {
+                const segments = selPath.split('/').filter(Boolean);
+                segments.shift();
+                let current: FileSystemDirectoryHandle | FileSystemFileHandle = handle;
 
-          try {
-            for (const segment of segments) {
-              if (current.kind === 'directory') {
-                  try {
-                      current = await current.getDirectoryHandle(segment);
-                  } catch {
-                      try {
-                          current = await current.getFileHandle(segment);
-                      } catch {
-                          return null; // Neither file nor directory exists
+                try {
+                    for (const segment of segments) {
+                      if (current.kind === 'directory') {
+                          try {
+                            current = await current.getDirectoryHandle(segment);
+                          } catch {
+                              try {
+                                current = await current.getFileHandle(segment);
+                              } catch {
+                                return null;  // Neither file nor directory exists
+                              }
+                          }
+                      } else {
+                        return null; // If the current level is not a directory, then we have more segments, it is invalid.
                       }
+                    }
+                  return selPath; // If we made it here, it is a valid selection
+                } catch (error) {
+                  return null;  // Invalid selection
+                }
+            }));
+
+
+            const validSelection = filteredSelection.filter((sel): sel is string => sel !== null);
+
+            const children = await generateFileSystemTree(dirHandle, entryPath, validSelection);
+            const isSelected = validSelection.includes(entryPath);
+            nodes.push({
+              path: entryPath,
+              name: entry.name,
+              type: "directory",
+              children: children,
+              selected: isSelected,
+            });
+          } else {
+              //check if selection is valid (same as above).
+            const isValidSelection = await (async() => {
+              const segments = entryPath.split('/').filter(Boolean);
+                segments.shift();
+                let current: FileSystemDirectoryHandle | FileSystemFileHandle = handle;
+
+                try {
+                  for(const segment of segments) {
+                    if (current.kind === 'directory') {
+                        try {
+                            current = await current.getDirectoryHandle(segment);
+                        } catch {
+                            try {
+                                current = await current.getFileHandle(segment);
+                            } catch {
+                                return false;  // Neither exists
+                            }
+                        }
+                    }
+                    else {
+                      return false;  // If the current level is not a directory, then we have more segments, it is invalid.
+                    }
                   }
-              } else {
-                return null;  // If the current level is not a directory and we have more segments, it is invalid.
-              }
-            }
-            return selPath; //if we make it through the try/catch, then it is a valid path
-          } catch (error) {
-            return null; // Path no longer exists
+                  return true; // If we made it here, it is a valid selection
+                } catch (error) {
+                  return false; // Invalid
+                }
+            })();
+
+            const isSelected = isValidSelection && initialSelection.includes(entryPath);
+            nodes.push({
+              path: entryPath,
+              name: entry.name,
+              type: "file",
+              selected: isSelected,
+            });
           }
-        }));
-
-        const validSelection = filteredSelection.filter((sel): sel is string => sel !== null); //filter out bad paths
-
-        const children = await generateFileSystemTree(dirHandle, entryPath, validSelection);
-        const isSelected = validSelection.includes(entryPath); // Check against valid selection
-        nodes.push({
-          path: entryPath,
-          name: entry.name,
-          type: "directory",
-          children: children,
-          selected: isSelected,
-        });
-      } else {
-        //check if selection is valid (same as above).
-        const isValidSelection = await (async () => {
-            const segments = entryPath.split('/').filter(Boolean);
-            segments.shift(); //remove first empty element.
-            let current: FileSystemDirectoryHandle | FileSystemFileHandle = handle;
-
-            try {
-              for (const segment of segments) {
-                if (current.kind === 'directory') {
-                  try {
-                      current = await current.getDirectoryHandle(segment);
-                  } catch {
-                      try {
-                          current = await current.getFileHandle(segment);
-                      } catch {
-                          return false; // Neither file nor directory exists
-                      }
-                  }
-                }
-                else {
-                  return false; // If we are not a directory, and we have more segments, then this isn't valid
-                }
-              }
-              return true; // we made it here.
-            } catch (error) {
-              return false; // Path no longer exists
-            }
-        })();
-
-
-        const isSelected = isValidSelection && initialSelection.includes(entryPath); //check against path and that it is valid.
-        nodes.push({
-          path: entryPath,
-          name: entry.name,
-          type: "file",
-          selected: isSelected,
-        });
-      }
+        })()
+      );
     }
+     // Await all entry processing concurrently
+        await Promise.all(entryPromises);
     return nodes;
   } catch (error) {
     console.error("Error generating file system tree:", error);
@@ -397,28 +405,28 @@ const FileSystemBrowser = () => {
       content = `\n--- Prompt Instruction: ${promptFileName} ---\n${promptFileContent}\n\n`;
     }
 
-    async function traverseTree(nodes: TreeNode[], currentHandle: FileSystemDirectoryHandle) {
+    // Recursively traverse and get file contents ONLY for selected files
+    async function traverseAndCopy(nodes: TreeNode[], currentHandle: FileSystemDirectoryHandle) {
       for (const node of nodes) {
         if (node.selected) {
           if (node.type === "file") {
             try {
               const fileHandle = await currentHandle.getFileHandle(node.name);
               const file = await fileHandle.getFile();
-              const fileContent = await file.text();
+              const fileContent = await file.text(); // NOW we read the file content
               content += `\n\n--- ${node.path} ---\n${fileContent}`;
             } catch (error) {
               console.error(`Error reading file ${node.path}:`, error);
-              alert(`Error reading file ${node.path}`);
             }
           } else if (node.type === "directory" && node.children) {
-            const dirHandle = await currentHandle.getDirectoryHandle(node.name);
-            await traverseTree(node.children, dirHandle);
+              const childDirHandle = await currentHandle.getDirectoryHandle(node.name); //get directory handle of child
+              await traverseAndCopy(node.children, childDirHandle); //recurse using that handle.
           }
         }
       }
     }
 
-    await traverseTree(fileSystemTree, directoryHandle);
+    await traverseAndCopy(fileSystemTree, directoryHandle);
 
     if (content) {
       try {
@@ -431,7 +439,7 @@ const FileSystemBrowser = () => {
     } else {
       alert("No file content to copy.");
     }
-  };
+};
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
