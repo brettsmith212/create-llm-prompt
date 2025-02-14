@@ -23,19 +23,19 @@ export default function HomePage() {
 
       <Card className="w-[90%] max-w-3xl mt-4">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">LLM XML Parser</CardTitle>
-        </CardHeader>
-        <ApplyChangesForm />
-      </Card>
-
-      <Card className="w-[90%] max-w-3xl mt-4">
-        <CardHeader>
           <div className="flex items-center justify-between w-full">
             <CardTitle className="text-2xl font-bold text-center">LLM Chatbox</CardTitle>
             <Button variant="destructive" onClick={handleNewChat}>New Chat</Button> {/* Use handleNewChat */}
           </div>
         </CardHeader>
         <LLMChatbox messages={messages} setMessages={setMessages} isLoading={isLoading} setIsLoading={setIsLoading}/>
+      </Card>
+
+      <Card className="w-[90%] max-w-3xl mt-4">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">LLM XML Parser</CardTitle>
+        </CardHeader>
+        <ApplyChangesForm />
       </Card>
     </main>
   );
