@@ -112,7 +112,7 @@ const LLMChatbox = () => {
                 message.role === "user"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-200 text-black"
-              }`}
+              } max-w-full`}
             >
               <ReactMarkdown
                 components={{
@@ -123,10 +123,11 @@ const LLMChatbox = () => {
                         <SyntaxHighlighter
                           style={{
                             ...gruvboxDark,
-                            maxWidth: '100%',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-all',
-                            display: 'block', // Important for max-width to work
+                            maxWidth: '100%',  // Ensure it doesn't exceed parent
+                            whiteSpace: 'pre-wrap', // Wrap long lines
+                            wordBreak: 'break-all', // Break words if needed
+                            display: 'block',
+                            overflowX: 'auto', // Add horizontal scroll if needed
                           }}
                           language={match[1]}
                           PreTag="div"
@@ -137,7 +138,7 @@ const LLMChatbox = () => {
                         <CopyButton textToCopy={String(children).replace(/\n$/, "")} />
                       </div>
                     ) : (
-                      <code className={className} {...props}>
+                      <code className={`${className} break-all`} {...props}>
                         {children}
                       </code>
                     );
