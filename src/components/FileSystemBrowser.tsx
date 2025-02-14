@@ -6,7 +6,13 @@ import {
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Loader2, RefreshCcw } from "lucide-react";
+import { Loader2, RefreshCcw, FolderPlus, FilePlus, XCircle, ListChecks } from "lucide-react";
+import {
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "~/components/ui/tooltip";
 
 interface TreeNode {
   path: string;
@@ -113,6 +119,8 @@ const FileSystemBrowser = () => {
   const [promptFileContent, setPromptFileContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedFileForRefresh, setSelectedFileForRefresh] = useState<string | null>(null);
+  const [showSelectedFiles, setShowSelectedFiles] = useState(false);
+
 
   const handleDirectorySelect = async () => {
     try {
@@ -349,46 +357,132 @@ const FileSystemBrowser = () => {
   return (
     <div className="flex flex-col items-center justify-center w-full">
       <Card className="w-[90%] max-w-3xl">
+      <TooltipProvider>
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">File System Browser</CardTitle>
           <CardDescription className="text-center">Select a directory and files to copy their contents.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           {/* Prompt Instruction File Selection */}
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={handlePromptFileSelect}>
-              Select Prompt Instruction File
-            </Button>
-            {promptFileHandle && (
-                <>
-                    <Button variant="destructive" onClick={handleClearPromptFile}>
-                        Clear Selected File
-                    </Button>
-                    <Button variant="outline" onClick={handleRefreshPromptFile} disabled={isLoading}>
-                        <RefreshCcw className="mr-2 h-4 w-4" /> Refresh Prompt File
-                    </Button>
-                </>
+          <div className="flex items-center flex-wrap gap-2">
+             <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline"  onClick={handlePromptFileSelect}>
+                    <FilePlus className="mr-2 h-4 w-4" />
+                    Select Prompt File
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Select Prompt Instruction File</p>
+                </TooltipContent>
+              </Tooltip>
+            {promptFileName && (
+              <span className="text-sm bg-secondary text-secondary-foreground px-3 py-1.5 rounded">
+                File: {promptFileName}
+              </span>
             )}
-            {promptFileName && <span className="text-sm">Selected: {promptFileName}</span>}
+            {promptFileHandle && (
+              <>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="destructive" size="icon" onClick={handleClearPromptFile}>
+                        <XCircle className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Clear Selected File</p>
+                    </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" onClick={handleRefreshPromptFile} disabled={isLoading}>
+                        <RefreshCcw className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Refresh Prompt File</p>
+                    </TooltipContent>
+                </Tooltip>
+              </>
+            )}
           </div>
 
           {/* Directory Selection */}
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={handleDirectorySelect} disabled={isLoading}>
-              Select Directory
-            </Button>
+          <div className="flex items-center flex-wrap gap-2">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="outline"  onClick={handleDirectorySelect} disabled={isLoading}>
+                    <FolderPlus className="mr-2 h-4 w-4" />
+                    Select Directory
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Select Directory</p></TooltipContent>
+            </Tooltip>
+
+            {directoryHandle && (
+              <span className="text-sm bg-secondary text-secondary-foreground px-3 py-1.5 rounded">
+                Folder: {directoryHandle.name}
+              </span>
+            )}
             {directoryHandle && (
               <>
-                <Button variant="destructive" onClick={handleClearSelectedFolder}>
-                  Clear Selected Folder
-                </Button>
-                <Button variant="outline" onClick={handleRefreshFolder} disabled={isLoading}>
-                  <RefreshCcw className="mr-2 h-4 w-4" /> Refresh Folder
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="destructive" size="icon" onClick={handleClearSelectedFolder}>
+                        <XCircle className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Clear Selected Folder</p>
+                    </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" onClick={handleRefreshFolder} disabled={isLoading}>
+                            <RefreshCcw className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Refresh Folder</p>
+                    </TooltipContent>
+                </Tooltip>
               </>
             )}
-            {directoryHandle && <span className="text-sm">Selected: {directoryHandle.name}</span>}
           </div>
+
+            {/* Show Selected Files Button */}
+            {selectedPaths.length > 0 && (
+                <div className="flex items-center gap-2">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setShowSelectedFiles(!showSelectedFiles)}
+                        >
+                            <ListChecks className="h-4 w-4" />
+                        </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                        <p>Toggle Selected Files</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <span className="text-sm text-muted-foreground">
+                        {selectedPaths.length} files selected
+                    </span>
+                </div>
+            )}
+            {/* Selected Files */}
+            {showSelectedFiles && (
+                <div className="border rounded-md p-2 bg-muted-foreground text-muted text-sm">
+                    <ul className="list-disc list-inside">
+                        {selectedPaths.map((path) => (
+                        <li key={path}>{path}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
           {/* File System Tree View */}
           {isLoading ? (
@@ -409,16 +503,31 @@ const FileSystemBrowser = () => {
 
             {/* Refresh and Copy Buttons */}
             <div className="flex justify-center gap-4">
-              {selectedFileForRefresh && (
-                <Button variant="outline" onClick={handleRefreshFile} disabled={isLoading}>
-                  <RefreshCcw className="mr-2 h-4 w-4" /> Refresh File
-                </Button>
+                 {selectedFileForRefresh && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" onClick={handleRefreshFile} disabled={isLoading}>
+                            <RefreshCcw className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Refresh Selected File</p>
+                    </TooltipContent>
+                </Tooltip>
               )}
-              <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
-                Copy Selected File Contents
-              </Button>
+               <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
+                            Copy Selected File Contents
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Copy Selected Files</p>
+                    </TooltipContent>
+                </Tooltip>
             </div>
         </CardContent>
+        </TooltipProvider>
       </Card>
     </div>
   );
