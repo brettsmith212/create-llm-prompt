@@ -17,15 +17,6 @@ interface Message {
   content: string;
 }
 
-// Placeholder function to simulate Gemini API interaction
-async function mockGeminiApiCall(message: string): Promise<string> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(`Echoing your message (Gemini Flash 2.0 Placeholder): ${message}`);
-    }, 500); // Simulate a small delay
-  });
-}
-
 const LLMChatbox = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -42,19 +33,25 @@ const LLMChatbox = () => {
         setIsLoading(true);
 
         try {
-            // Placeholder for the API call
-            let responseContent = "";
-            if (selectedLLM === "gemini") {
-                responseContent = await mockGeminiApiCall(input);
-            }
-             else {
-                responseContent = `Selected LLM not implemented yet.`;
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ messages: [...messages, userMessage], llm: selectedLLM }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
             }
 
-            const assistantMessage: Message = { role: "assistant", content: responseContent };
+            const data = await response.json();
+            const assistantMessage: Message = { role: "assistant", content: data.text };
             setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-        } catch (error) {
+
+        } catch (error:any) {
             console.error("Error:", error);
+            setMessages((prevMessages) => [...prevMessages, { role: "assistant", content: `Error: ${error.message}` }]);
 
         } finally {
           setIsLoading(false);
@@ -122,6 +119,7 @@ const LLMChatbox = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="gemini">Gemini Flash 2.0</SelectItem>
+                {/* Future models can be added here */}
               </SelectContent>
             </Select>
             <Button onClick={handleSubmit} disabled={isLoading}>
