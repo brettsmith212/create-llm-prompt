@@ -6,7 +6,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCcw } from "lucide-react";
 
 interface TreeNode {
   path: string;
@@ -112,6 +112,7 @@ const FileSystemBrowser = () => {
   const [promptFileName, setPromptFileName] = useState<string>("");
   const [promptFileContent, setPromptFileContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [selectedFileForRefresh, setSelectedFileForRefresh] = useState<string | null>(null);
 
   const handleDirectorySelect = async () => {
     try {
@@ -121,6 +122,7 @@ const FileSystemBrowser = () => {
       const tree = await generateFileSystemTree(handle);
       setFileSystemTree(tree);
       setExpandedFolders({}); // Reset expanded folders on new directory selection
+      setSelectedFileForRefresh(null); // Reset selected file
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         // User cancelled the directory selection, do nothing
@@ -138,6 +140,8 @@ const FileSystemBrowser = () => {
         setFileSystemTree(null);
         setSelectedPaths([]);
         setExpandedFolders({});
+        setSelectedFileForRefresh(null); // Reset selected file
+
     };
 
   const handleNodeSelectionChange = (path: string, selected: boolean) => {
@@ -179,6 +183,10 @@ const FileSystemBrowser = () => {
       }, []);
 
       setSelectedPaths(updatedSelectedPaths);
+
+      // Update selectedFileForRefresh
+      const selectedNode = updatedTree.find(n => n.path === path);
+      setSelectedFileForRefresh(selectedNode?.type === 'file' ? path : null);
     }
   };
 
@@ -210,6 +218,85 @@ const FileSystemBrowser = () => {
         setPromptFileName("");
         setPromptFileContent("");
     };
+
+    const handleRefreshPromptFile = async () => {
+        if (!promptFileHandle) return;
+
+        setIsLoading(true);
+        try {
+            const file = await promptFileHandle.getFile();
+            const fileContent = await file.text();
+            setPromptFileContent(fileContent);
+
+        } catch (error) {
+            console.error("Error refreshing prompt file:", error);
+            alert("Error refreshing prompt file.");
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+  const handleRefreshFile = async () => {
+    if (!directoryHandle || !selectedFileForRefresh) return;
+
+    setIsLoading(true);
+    const pathSegments = selectedFileForRefresh.split('/').filter(Boolean); // Split the path into segments
+    pathSegments.shift();
+    let currentHandle: FileSystemDirectoryHandle | undefined = directoryHandle;
+
+    try {
+        // Traverse down the tree to get the correct FileSystemDirectoryHandle
+        for (let i = 0; i < pathSegments.length - 1; i++) {
+            const segment = pathSegments[i];
+            if (currentHandle) {
+              currentHandle = await currentHandle.getDirectoryHandle(segment);
+            } else {
+              throw new Error("Could not traverse to directory: " + segment); // directory doesn't exist.
+            }
+        }
+
+        const fileName = pathSegments[pathSegments.length - 1]; // get the file name, which is the last part
+
+        if (!currentHandle) {
+          throw new Error(`Could not find file handle. ${selectedFileForRefresh}`);
+        }
+
+        const fileHandle = await currentHandle.getFileHandle(fileName); // get the file handle for the file.
+        const file = await fileHandle.getFile(); // get file
+        const fileContent = await file.text(); // read the file content.
+
+        // Alert the user or log it.  This doesn't update the fileSystemTree, it just reads and displays.
+        console.log(`--- Refreshed ${selectedFileForRefresh} ---\n${fileContent}`);
+
+    } catch (error) {
+      console.error(`Error refreshing file ${selectedFileForRefresh}:`, error);
+      alert(`Error refreshing file ${selectedFileForRefresh}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefreshFolder = async () => {
+    if (!directoryHandle) return;
+
+    setIsLoading(true);
+    // Store current selections and expanded folders.
+    const currentSelections = [...selectedPaths];
+    const currentExpandedFolders = { ...expandedFolders };
+
+    try {
+      // Regenerate tree, using stored selections
+      const tree = await generateFileSystemTree(directoryHandle, "", currentSelections);
+      setFileSystemTree(tree);
+      setExpandedFolders(currentExpandedFolders); // Restore expanded folders
+      setSelectedPaths(currentSelections); // re-apply selections.
+    } catch (error) {
+      console.error("Error refreshing folder:", error);
+      alert("Error refreshing folder");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCopySelectedFiles = async () => {
     if (!fileSystemTree || !directoryHandle) {
@@ -272,10 +359,15 @@ const FileSystemBrowser = () => {
             <Button variant="outline" onClick={handlePromptFileSelect}>
               Select Prompt Instruction File
             </Button>
-            {promptFileName && (
-              <Button variant="destructive" onClick={handleClearPromptFile}>
-                Clear Selected File
-              </Button>
+            {promptFileHandle && (
+                <>
+                    <Button variant="destructive" onClick={handleClearPromptFile}>
+                        Clear Selected File
+                    </Button>
+                    <Button variant="outline" onClick={handleRefreshPromptFile} disabled={isLoading}>
+                        <RefreshCcw className="mr-2 h-4 w-4" /> Refresh Prompt File
+                    </Button>
+                </>
             )}
             {promptFileName && <span className="text-sm">Selected: {promptFileName}</span>}
           </div>
@@ -286,9 +378,14 @@ const FileSystemBrowser = () => {
               Select Directory
             </Button>
             {directoryHandle && (
-              <Button variant="destructive" onClick={handleClearSelectedFolder}>
-                Clear Selected Folder
-              </Button>
+              <>
+                <Button variant="destructive" onClick={handleClearSelectedFolder}>
+                  Clear Selected Folder
+                </Button>
+                <Button variant="outline" onClick={handleRefreshFolder} disabled={isLoading}>
+                  <RefreshCcw className="mr-2 h-4 w-4" /> Refresh Folder
+                </Button>
+              </>
             )}
             {directoryHandle && <span className="text-sm">Selected: {directoryHandle.name}</span>}
           </div>
@@ -310,12 +407,17 @@ const FileSystemBrowser = () => {
             </div>
           )}
 
-          {/* Copy Button */}
-          <div className="flex justify-center">
-            <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
-              Copy Selected File Contents
-            </Button>
-          </div>
+            {/* Refresh and Copy Buttons */}
+            <div className="flex justify-center gap-4">
+              {selectedFileForRefresh && (
+                <Button variant="outline" onClick={handleRefreshFile} disabled={isLoading}>
+                  <RefreshCcw className="mr-2 h-4 w-4" /> Refresh File
+                </Button>
+              )}
+              <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
+                Copy Selected File Contents
+              </Button>
+            </div>
         </CardContent>
       </Card>
     </div>
