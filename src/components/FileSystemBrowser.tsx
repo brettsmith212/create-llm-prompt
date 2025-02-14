@@ -124,6 +124,17 @@ async function generateFileSystemTree(
     }
      // Await all entry processing concurrently
         await Promise.all(entryPromises);
+
+    // Sort nodes: directories first, then files, alphabetically by name.
+    nodes.sort((a, b) => {
+      if (a.type === "directory" && b.type === "file") {
+        return -1; // a (directory) comes before b (file)
+      } else if (a.type === "file" && b.type === "directory") {
+        return 1; // a (file) comes after b (directory)
+      } else {
+        return a.name.localeCompare(b.name); // Both same type, sort alphabetically
+      }
+    });
     return nodes;
   } catch (error) {
     console.error("Error generating file system tree:", error);
