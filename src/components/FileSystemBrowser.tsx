@@ -405,51 +405,74 @@ const FileSystemBrowser = () => {
     }
   };
 
-  const handleCopySelectedFiles = async () => {
-    if (!fileSystemTree || !directoryHandle) {
-      alert("No files selected or tree generated");
-      return;
+ const handleCopySelectedFiles = async () => {
+    if (!directoryHandle) {
+        alert("No directory selected.");
+        return;
     }
 
     let content = "";
 
     if (promptFileContent) {
-      content = `\n--- Prompt Instruction: ${promptFileName} ---\n${promptFileContent}\n\n`;
+        content = `\n--- Prompt Instruction: ${promptFileName} ---\n${promptFileContent}\n\n`;
     }
 
-    // Recursively traverse and get file contents ONLY for selected files
-    async function traverseAndCopy(nodes: TreeNode[], currentHandle: FileSystemDirectoryHandle) {
-      for (const node of nodes) {
-        if (node.selected) {
-          if (node.type === "file") {
-            try {
-              const fileHandle = await currentHandle.getFileHandle(node.name);
-              const file = await fileHandle.getFile();
-              const fileContent = await file.text(); // NOW we read the file content
-              content += `\n\n--- ${node.path} ---\n${fileContent}`;
-            } catch (error) {
-              console.error(`Error reading file ${node.path}:`, error);
+    // Function to get file content by path
+    async function getFileContent(filePath: string): Promise<string> {
+        const pathSegments = filePath.split('/').filter(Boolean);
+        // pathSegments.shift(); // REMOVE THIS LINE - IT'S THE BUG!
+        let currentHandle: FileSystemDirectoryHandle | FileSystemFileHandle = directoryHandle;
+
+        try {
+            // Traverse to get the correct handle
+            for (let i = 0; i < pathSegments.length; i++) {
+                const segment = pathSegments[i];
+                if (i < pathSegments.length - 1) { // Traverse directories
+                    currentHandle = await (currentHandle as FileSystemDirectoryHandle).getDirectoryHandle(segment);
+                } else { // Get file handle
+                   currentHandle = await (currentHandle as FileSystemDirectoryHandle).getFileHandle(segment);
+                }
             }
-          } else if (node.type === "directory" && node.children) {
-              const childDirHandle = await currentHandle.getDirectoryHandle(node.name); //get directory handle of child
-              await traverseAndCopy(node.children, childDirHandle); //recurse using that handle.
-          }
+
+            // Get and return file content.
+            const file = await (currentHandle as FileSystemFileHandle).getFile();
+            return await file.text();
+        } catch (error) {
+            console.error(`Error reading file ${filePath}:`, error);
+            return `Error reading file ${filePath}`; // Return error message as content.
         }
-      }
     }
 
-    await traverseAndCopy(fileSystemTree, directoryHandle);
+     async function traverseAndCopy(currentHandle: FileSystemDirectoryHandle, path: string) {
+        for await (const entry of currentHandle.values()) {
+            const entryPath = `${path}/${entry.name}`;
+
+            if (selectedPaths.includes(entryPath)) {
+                if (entry.kind === "file") {
+                    const fileContent = await getFileContent(entryPath);
+                    content += `\n\n--- ${entryPath} ---\n${fileContent}`;
+                }
+            }
+             if (entry.kind === 'directory') {
+                const childDirHandle = await currentHandle.getDirectoryHandle(entry.name);
+                await traverseAndCopy(childDirHandle, entryPath);
+            }
+        }
+    }
+
+    await traverseAndCopy(directoryHandle, "");
+
 
     if (content) {
-      try {
-        await navigator.clipboard.writeText(content);
-        alert("File contents copied to clipboard!");
-      } catch (error) {
-        console.error("Error copying to clipboard:", error);
-        alert("Failed to copy to clipboard: " + error);
-      }
+        try {
+            await navigator.clipboard.writeText(content);
+            alert("File contents copied to clipboard!");
+        } catch (error) {
+            console.error("Error copying to clipboard:", error);
+            alert("Failed to copy to clipboard: " + error);
+        }
     } else {
-      alert("No file content to copy.");
+        alert("No file content to copy.");
     }
 };
 
