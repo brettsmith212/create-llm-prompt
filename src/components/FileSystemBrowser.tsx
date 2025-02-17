@@ -274,6 +274,11 @@ const FileSystemBrowser = () => {
 
       setSelectedPaths(updatedSelectedPaths);
 
+       // If "Show Selected Files" is open and there are no files, close it.
+      if (showSelectedFiles && updatedSelectedPaths.length === 0) {
+            setShowSelectedFiles(false);
+        }
+
       // Update selectedFileForRefresh
       const selectedNode = updatedTree.find(n => n.path === path);
       setSelectedFileForRefresh(selectedNode?.type === 'file' ? path : null);
