@@ -573,12 +573,10 @@ const FileSystemBrowser = () => {
             </Tooltip>
 
             {directoryHandle && (
-              <span className="text-sm bg-secondary text-secondary-foreground px-3 py-1.5 rounded">
-                Folder: {directoryHandle.name}
-              </span>
-            )}
-            {directoryHandle && (
               <>
+                <span className="text-sm bg-secondary text-secondary-foreground px-3 py-1.5 rounded">
+                  Folder: {directoryHandle.name}
+                </span>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="destructive" size="icon" onClick={handleClearSelectedFolder}>
