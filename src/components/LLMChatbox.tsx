@@ -46,6 +46,7 @@ const LLMChatbox: React.FC<LLMChatboxProps> = ({
   const [selectedLLM, setSelectedLLM] = useState("gemini");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasMounted = useRef(false);
 
   const handleSubmit = async () => {
     if (input.trim() === "" || isLoading) return;
@@ -88,14 +89,13 @@ const LLMChatbox: React.FC<LLMChatboxProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, []);
-
   // Auto-scroll to the bottom when new messages are added
     useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+
     if (messagesEndRef.current) {
       const shouldScroll =
         messagesEndRef.current.scrollHeight - messagesEndRef.current.scrollTop <=
