@@ -487,6 +487,25 @@ const FileSystemBrowser = () => {
     }
 };
 
+  const handleClearSelectedFiles = () => {
+    if (fileSystemTree) {
+      const unselectAll = (tree: TreeNode[]): TreeNode[] => {
+        return tree.map(node => ({
+          ...node,
+          selected: false,
+          children: node.children ? unselectAll(node.children) : undefined
+        }));
+      };
+
+      setFileSystemTree(unselectAll(fileSystemTree));
+    }
+    setSelectedPaths([]);
+    setShowSelectedFiles(false);
+    setSelectedFileForRefresh(null);
+  };
+
+
+
   return (
     <div className="flex flex-col items-center justify-center w-full">
       <Card className="w-[90%] max-w-3xl">
@@ -584,27 +603,43 @@ const FileSystemBrowser = () => {
             )}
           </div>
 
-            {/* Show Selected Files Button */}
+            {/* Clear and Show Selected Files Button */}
             {selectedPaths.length > 0 && (
                 <div className="flex items-center gap-2">
                     <Tooltip>
                         <TooltipTrigger asChild>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setShowSelectedFiles(!showSelectedFiles)}
-                        >
-                            <ListChecks className="h-4 w-4" />
-                        </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleClearSelectedFiles}
+                                disabled={selectedPaths.length === 0}
+                            >
+                                Clear Selected Files
+                            </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                        <p>Toggle Selected Files</p>
+                            <p>Clear Selected Files</p>
                         </TooltipContent>
                     </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowSelectedFiles(!showSelectedFiles)}
+                            >
+                                {showSelectedFiles ? "Hide Selected Files" : "Show Selected Files"}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Toggle Selected Files Visibility</p>
+                        </TooltipContent>
+                    </Tooltip>
+
                     <span className="text-sm text-muted-foreground">
                         {selectedPaths.length} files selected
                     </span>
+
                 </div>
+
             )}
             {/* Selected Files */}
             {showSelectedFiles && (
