@@ -261,8 +261,8 @@ const FileSystemBrowser = () => {
       // Update selected paths state
       const updatedSelectedPaths = updatedTree.reduce((acc: string[], node) => {
         function collectSelectedPaths(node: TreeNode) {
-          if (node.selected) {
-            acc.push(node.path);
+          if (node.selected && node.type === "file") { // Only add files
+              acc.push(node.path);
           }
           if (node.type === "directory" && node.children) {
             node.children.forEach(collectSelectedPaths);
@@ -604,11 +604,11 @@ const FileSystemBrowser = () => {
             {/* Selected Files */}
             {showSelectedFiles && (
                 <div className="border rounded-md p-2 bg-secondary text-secondary-foreground text-sm overflow-y-auto max-h-40 scrollbar">
-                    <ul className="space-y-1">
+                  <ul className="space-y-1">
                         {selectedPaths.map((path) => (
                         <li key={path} className="text-secondary-foreground">{path}</li>
                         ))}
-                    </ul>
+                  </ul>
                 </div>
             )}
 
@@ -629,20 +629,8 @@ const FileSystemBrowser = () => {
             </div>
           )}
 
-            {/* Refresh and Copy Buttons */}
+            {/* Copy to Clipboard Button */}
             <div className="flex justify-center gap-4">
-                 {selectedFileForRefresh && (
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" onClick={handleRefreshFile} disabled={isLoading}>
-                            <RefreshCcw className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Refresh Selected File</p>
-                    </TooltipContent>
-                </Tooltip>
-              )}
                <Tooltip>
                     <TooltipTrigger asChild>
                         <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree || isCopying}>
