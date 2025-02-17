@@ -201,6 +201,7 @@ const FileSystemBrowser = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedFileForRefresh, setSelectedFileForRefresh] = useState<string | null>(null);
   const [showSelectedFiles, setShowSelectedFiles] = useState(false);
+  const [isCopying, setIsCopying] = useState(false); // Track copying state
 
 
   const handleDirectorySelect = async () => {
@@ -411,6 +412,8 @@ const FileSystemBrowser = () => {
         return;
     }
 
+    setIsCopying(true); // Set copying state to true
+
     let content = "";
 
     if (promptFileContent) {
@@ -460,19 +463,22 @@ const FileSystemBrowser = () => {
         }
     }
 
-    await traverseAndCopy(directoryHandle, "");
-
-
-    if (content) {
-        try {
+    try {
+        await traverseAndCopy(directoryHandle, "");
+        if (content) {
             await navigator.clipboard.writeText(content);
             alert("File contents copied to clipboard!");
-        } catch (error) {
-            console.error("Error copying to clipboard:", error);
-            alert("Failed to copy to clipboard: " + error);
+
+        } else {
+            alert("No file content to copy.");
         }
-    } else {
-        alert("No file content to copy.");
+    }
+    catch (error) {
+        console.error("Error copying to clipboard:", error);
+        alert("Failed to copy to clipboard: " + error);
+
+    } finally {
+        setIsCopying(false); // Reset copying state in finally block
     }
 };
 
@@ -639,12 +645,19 @@ const FileSystemBrowser = () => {
               )}
                <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree}>
-                            Copy Selected File Contents
+                        <Button onClick={handleCopySelectedFiles} disabled={!fileSystemTree || isCopying}>
+                        {isCopying ? (
+                            <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Copying...
+                            </>
+                        ) : (
+                            "Copy Selected File Contents"
+                        )}
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Copy Selected Files</p>
+                        <p>{isCopying ? "Copying..." : "Copy Selected Files"}</p>
                     </TooltipContent>
                 </Tooltip>
             </div>
